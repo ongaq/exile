@@ -65,6 +65,8 @@ firebase.initializeApp({
   messagingSenderId: env.MESSAGING_SENDER_ID,
   projectId: env.PROJECT_ID,
 });
+const firestore = firebase.firestore();
+firestore.settings({ timestampsInSnapshots: true });
 
 export default {
   name: 'index',
@@ -103,8 +105,7 @@ export default {
           }],
         },
       },
-      date: moment().format('YYYY-MM-DD'),
-      DB: firebase.firestore(),
+      showWeek: 14,
     };
   },
   components: { modal, PulseLoader, LineChart },
@@ -125,60 +126,88 @@ export default {
     async init(){
       this.waiting = true;
       const keys = Object.keys(this.users);
-      const usersLen = keys.length;
-      const showWeek = 14;
+      // 新しく値を取得しに行く
+      const results = await this.fetchValueToFirestore(keys);
 
-      // this.currentShowUsersはbool値ではなく、
-      // 取得データの最終日を保存しておき、本日のnew Dateと比較するのがいいかも？
-      // if (!this.currentShowUsers) {
-      for (let i=showWeek; i > 0; i--) {
-        this.updateDate(-i);
-        for (let j=0; j < usersLen; j++) {
-          await this.updateUsersPersonality(keys, j);
+      // 多重データ書き込み防止のため一旦Usersを初期化する
+      this.initUsersData();
+      // resultsを元にユーザーデータを更新する
+      this.updateUsersPersonality(results, keys);
+      // ユーザーデータを元にグラフの描画を設定する
+      this.updateChartJS(keys);
+
+      this.waiting = false;
+      this.showMaru = true;
+    },
+    async fetchValueToFirestore(keys){
+      const targets = [];
+      let temp = [];
+
+      for (let i=this.showWeek; i > 0; i--) {
+        const date = moment().add(-i, 'days').format('YYYY-MM-DD');
+        for (let j=0; j < keys.length; j++) {
+          temp[keys[j]] = { j, date };
+        }
+        targets[i] = temp;
+        temp = {};
+      }
+
+      const results = await Promise.all(targets.map(async (data) => {
+        const resultTemp = {};
+        for (let i=0, obj=Object.keys(data); i < obj.length; i++) {
+          resultTemp[obj[i]] = await this.DBProcess(data, obj[i]);
+        }
+        return resultTemp;
+      }));
+
+      return results;
+    },
+    updateUsersPersonality(results, keys){
+      const len = keys.length;
+
+      for (let i=this.showWeek; i > 0; i--) {
+        const item = results[i];
+        for (let j=0; j < len; j++) {
+          this.users[keys[j]].date.push(moment(item[keys[j]].date).format('M/D'));
+          this.users[keys[j]].weight.push(item[keys[j]].weight);
+          this.users[keys[j]].fat.push(item[keys[j]].fat);
         }
       }
       // weight, fatに未入力項目があれば前後の値で補完する
-      for (let i=0; i < usersLen; i++) {
+      for (let i=0; i < len; i++) {
         this.users[keys[i]].weight = this.adjustIfValueIs(this.users[keys[i]].weight);
         this.users[keys[i]].fat = this.adjustIfValueIs(this.users[keys[i]].fat);
       }
-      // }
-      // const transferData = JSON.parse(JSON.stringify({
-      //   yoshida: this.users.yoshida,
-      //   hirata: this.users.hirata,
-      //   maruyama: this.users.maruyama,
-      // }));
+
       this.usersData({
         yoshida: this.users.yoshida,
         hirata: this.users.hirata,
         maruyama: this.users.maruyama,
       });
-
+    },
+    updateChartJS(keys){
       // usersの0番目を表示する初期設定
+      let active = keys;
+      if (this.currentToggle) {
+        active = Object.keys(this.currentToggle).filter(name => this.currentToggle[name] === true);
+      }
       this.fillData({
-        date: this.users[keys[0]].date,
-        weight: this.users[keys[0]].weight,
-        fat: this.users[keys[0]].fat
+        date: this.users[active[0]].date,
+        weight: this.users[active[0]].weight,
+        fat: this.users[active[0]].fat
       });
-      this.chartData.weight.labels = this.users[keys[0]].date;
-      this.chartData.weight.datasets[0].data = this.users[keys[0]].weight;
-      this.chartData.fat.labels = this.users[keys[0]].date;
-      this.chartData.fat.datasets[0].data = this.users[keys[0]].fat;
-
-      this.toggle(keys[0]);
-
-      this.waiting = false;
-      this.showMaru = true;
+      this.chartData.weight.labels = this.users[active[0]].date;
+      this.chartData.weight.datasets[0].data = this.users[active[0]].weight;
+      this.chartData.fat.labels = this.users[active[0]].date;
+      this.chartData.fat.datasets[0].data = this.users[active[0]].fat;
+      this.toggle(active[0]);
     },
-    async updateUsersPersonality(usersArray, num){
-      const user = this.users[usersArray[num]];
-      const data = await this.databaseGET(usersArray[num], this.date);
-      user.date.push(moment(data.date).format('M/D'));
-      user.weight.push(data.weight);
-      user.fat.push(data.fat);
-    },
-    updateDate(date){
-      this.date = moment().add(date, 'days').format('YYYY-MM-DD');
+    initUsersData(){
+      this.users = {
+        yoshida: { date: [], weight: [], fat: [] },
+        maruyama: { date: [], weight: [], fat: [] },
+        hirata: { date: [], weight: [], fat: [] },
+      };
     },
     adjustIfValueIs(data){
       // 空の配列が含まれていなければ処理中断
@@ -210,15 +239,15 @@ export default {
 
       return filtered;
     },
-    databaseGET(name, date){
-      const todayDB = this.DB.collection('users').doc(name).collection(date);
+    DBProcess(data, name){
+      const date = data[name].date;
+      const todayDB = firestore.collection('users').doc(name).collection(date);
       const noData = { date, weight: '', fat: '' };
 
       return new Promise((resolve) => {
         if (typeof todayDB !== 'object') resolve(noData);
 
-        todayDB.get()
-        .then((querySnapshot) => {
+        todayDB.get().then((querySnapshot) => {
           if (querySnapshot.empty) resolve(noData);
 
           querySnapshot.forEach(doc => resolve(Object.assign(doc.data(), { date })));
@@ -228,11 +257,12 @@ export default {
     },
     nameConvert(user){
       let name = user;
-
-      if (name === 'yoshida') name = '吉田';
-      else if (name === 'hirata') name = '平田';
-      else if (name === 'maruyama') name = '丸山';
-
+      switch (name) {
+        case 'yoshida': name = '吉田'; break;
+        case 'hirata': name = '平田'; break;
+        case 'maruyama': name = '丸山'; break;
+        default: break;
+      }
       return name;
     },
   },
