@@ -1,8 +1,6 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import createPersistedState from 'vuex-persistedstate';
-//
-// const JSONC = require('json-cycle');
 
 Vue.use(Vuex);
 
@@ -28,7 +26,6 @@ export default new Vuex.Store({
   },
   mutations: {
     CHANGE_USERS(state, obj){
-      // state.users = JSON.parse(JSON.stringify(Object.assign({}, state.users, obj)));
       state.users = Object.assign({}, state.users, obj);
       state.showUsers = true;
     },
@@ -88,12 +85,5 @@ export default new Vuex.Store({
   plugins: [createPersistedState({
     key: 'marufes',
     paths: ['showUsers', 'isActive', 'users', 'chartData', 'formInputter'],
-    // storage: {
-    //   // getItem: key => JSONC.retrocycle(JSONC.parse(localStorage.getItem(key))),
-    //   // setItem: (key, value) => localStorage.setItem(key, JSONC.stringify(JSONC.decycle(value))),
-    //   getItem: async (key) => { await localStorage.getItem(key); },
-    //   setItem: async (key, value) => { await localStorage.setItem(key, value); },
-    //   removeItem: key => localStorage.removeItem(key),
-    // },
   })],
 });
