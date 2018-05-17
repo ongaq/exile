@@ -186,11 +186,12 @@ export default {
       });
     },
     updateChartJS(keys){
-      // usersの0番目を表示する初期設定
-      let active = keys;
-      if (this.currentToggle) {
-        active = Object.keys(this.currentToggle).filter(name => this.currentToggle[name] === true);
-      }
+      // toggleがActiveなユーザのチャートを表示する
+      let active = Object.keys(this.currentToggle).filter(name => this.currentToggle[name] === true);
+
+      // 一度もtoggleがtrueになってなければusersの0番目を表示する
+      if (!active.length) active = keys;
+
       this.fillData({
         date: this.users[active[0]].date,
         weight: this.users[active[0]].weight,
