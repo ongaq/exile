@@ -22,6 +22,7 @@ export default new Vuex.Store({
       weight: [],
       fat: [],
     },
+    lastUpdate: null,
     formInputter: false,
   },
   mutations: {
@@ -42,6 +43,9 @@ export default new Vuex.Store({
       };
       state.isActive[user] = true;
     },
+    CHANGE_LASTUPDATE(state, date){
+      state.lastUpdate = date;
+    },
     CHANGE_INPUTTER(state, user){
       state.formInputter = user;
     },
@@ -50,6 +54,7 @@ export default new Vuex.Store({
     usersData: ({ commit }, obj) => commit('CHANGE_USERS', obj),
     fillData: ({ commit }, obj) => commit('CHANGE_DATA', obj),
     toggle: ({ commit }, user) => commit('CHANGE_TOGGLE', user),
+    lastUpdate: ({ commit }, date) => commit('CHANGE_LASTUPDATE', date),
     formInputter: ({ commit }, user) => commit('CHANGE_INPUTTER', user),
   },
   getters: {
@@ -80,10 +85,11 @@ export default new Vuex.Store({
       }
     }),
     currentToggle: state => state.isActive,
+    currentLastUpdate: state => state.lastUpdate,
     currentInputter: state => state.formInputter,
   },
   plugins: [createPersistedState({
     key: 'marufes',
-    paths: ['showUsers', 'isActive', 'users', 'chartData', 'formInputter'],
+    paths: ['showUsers', 'isActive', 'users', 'chartData', 'formInputter', 'lastUpdate'],
   })],
 });

@@ -2,11 +2,11 @@
   <div class="idx">
     <router-link to="form" tag="button" class="button is-link">form</router-link>
     <br><br>
-    <button id="submit" @click="init" v-show="!waiting" class="button is-info">直近2週間のデータを表示</button>
+    <button id="submit" @click="init" v-show="!waiting" class="button is-info">直近2週間のデータを再描画</button>
     <br><br>
 
     <pulse-loader v-if="waiting"></pulse-loader>
-    <section class="fatPeople" v-show="currentShowUsers">
+    <section class="fatPeople" v-show="currentShowUsers && !waiting">
       <nav class="tabs is-boxed is-centered">
         <ul>
           <li v-for="(array, name) in currentUsersData" :key="name"
@@ -106,6 +106,7 @@ export default {
         },
       },
       showWeek: 14,
+      date: moment().add(-1, 'days').format('YYYY-MM-DD'),
     };
   },
   components: { modal, PulseLoader, LineChart },
@@ -114,14 +115,24 @@ export default {
       'currentShowUsers',
       'currentUsersData',
       'currentChartData',
-      'currentToggle'
+      'currentToggle',
+      'currentLastUpdate'
     ])
+  },
+  created(){
+    // 初回ロード時にinit実行。次回ロード時はstateから再描画するが、
+    // lastUpdateと現在の日付が違えば更新を走らせる。
+    if (this.date !== this.currentLastUpdate) {
+      this.init();
+      this.lastUpdate(moment().add(-1, 'days').format('YYYY-MM-DD'));
+    }
   },
   methods: {
     ...mapActions([
       'usersData',
       'fillData',
-      'toggle'
+      'toggle',
+      'lastUpdate'
     ]),
     async init(){
       this.waiting = true;
