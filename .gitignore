@@ -1,7 +1,7 @@
 .DS_Store
 .firebaserc
+.env.js
 node_modules/
-/public/config/prod.env.js
 /public/dist/
 /public/static/
 npm-debug.log*

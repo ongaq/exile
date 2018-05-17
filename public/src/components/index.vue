@@ -53,7 +53,7 @@ import modal from '@/components/modal';
 import LineChart from '@/components/LineChart';
 
 const PulseLoader = require('vue-spinner/dist/vue-spinner.min').PulseLoader;
-const env = require('../../config/prod.env');
+const env = require('../../../.env');
 require('firebase/app');
 require('firebase/firestore');
 
