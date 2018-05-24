@@ -177,7 +177,7 @@ $vue-color: #42b983;
   &__select,
   &__input {
     padding: 4px 8px;
-    width: 70px;
+    font-size: 1rem;
     border: 1px solid #f0f0f0;
     border-radius: 3px;
     transition: box-shadow 0.3s ease;
@@ -193,11 +193,11 @@ $vue-color: #42b983;
     appearance: none;
   }
   &__select {
-    width: 100px;
+    width: 120px;
     background-color: #fff;
   }
   &__input {
-
+    width: 70px;
   }
   &__notes {
     margin-left: 5px;
