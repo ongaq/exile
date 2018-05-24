@@ -49,6 +49,7 @@ import * as moment from 'moment';
 import { mapGetters, mapActions } from 'vuex';
 import modal from '@/components/modal';
 
+const env = require('../../../.env');
 require('firebase/app');
 require('firebase/firestore');
 
@@ -70,11 +71,7 @@ export default {
         date: today,
         text: '今日',
       },
-      users: {
-        yoshida: '吉田',
-        maruyama: '丸山',
-        hirata: '平田',
-      },
+      users: env.USERS,
       date: moment().date(),
       dates: [{
         id: 1,

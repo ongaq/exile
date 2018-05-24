@@ -1,22 +1,17 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
+import mixin from '@/mixin';
 import createPersistedState from 'vuex-persistedstate';
 
 Vue.use(Vuex);
 
+const env = require('../../.env');
+
 export default new Vuex.Store({
   state: {
     showUsers: false,
-    isActive: {
-      yoshida: false,
-      hirata: false,
-      maruyama: false,
-    },
-    users: {
-      yoshida: { date: [], weight: [], fat: [] },
-      maruyama: { date: [], weight: [], fat: [] },
-      hirata: { date: [], weight: [], fat: [] },
-    },
+    isActive: {},
+    users: {},
     chartData: {
       date: [],
       weight: [],
@@ -27,7 +22,12 @@ export default new Vuex.Store({
   },
   mutations: {
     CHANGE_USERS(state, obj){
-      state.users = Object.assign({}, state.users, obj);
+      if (!Object.keys(state.users).length) {
+        state.users = mixin.methods.$_createdUsersData();
+      }
+      // console.log('obj:', obj);
+      // state.users = Object.assign({}, state.users, obj);
+      state.users = obj;
       state.showUsers = true;
     },
     CHANGE_DATA(state, item){
@@ -36,11 +36,7 @@ export default new Vuex.Store({
       state.chartData.fat = item.fat;
     },
     CHANGE_TOGGLE(state, user){
-      state.isActive = {
-        yoshida: false,
-        hirata: false,
-        maruyama: false,
-      };
+      state.isActive = mixin.methods.$_createdUsersData(false);
       state.isActive[user] = true;
     },
     CHANGE_LASTUPDATE(state, date){
@@ -89,7 +85,14 @@ export default new Vuex.Store({
     currentInputter: state => state.formInputter,
   },
   plugins: [createPersistedState({
-    key: 'marufes',
-    paths: ['showUsers', 'isActive', 'users', 'chartData', 'formInputter', 'lastUpdate'],
+    key: env.LOCAL_STORAGE_NAME,
+    paths: [
+      'showUsers',
+      'isActive',
+      'users',
+      'chartData',
+      'formInputter',
+      'lastUpdate'
+    ],
   })],
 });

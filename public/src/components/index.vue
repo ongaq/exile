@@ -49,6 +49,7 @@
 import * as firebase from 'firebase';
 import * as moment from 'moment';
 import { mapGetters, mapActions } from 'vuex';
+import mixin from '@/mixin';
 import modal from '@/components/modal';
 import LineChart from '@/components/LineChart';
 
@@ -70,17 +71,13 @@ firestore.settings({ timestampsInSnapshots: true });
 
 export default {
   name: 'index',
+  mixins: [mixin],
   data() {
     return {
       showModal: false,
       showError: false,
-      showMaru: false,
       waiting: false,
-      users: {
-        yoshida: { date: [], weight: [], fat: [] },
-        maruyama: { date: [], weight: [], fat: [] },
-        hirata: { date: [], weight: [], fat: [] },
-      },
+      users: {},
       chartData: {
         weight: {
           labels: [],
@@ -119,7 +116,13 @@ export default {
       'currentLastUpdate'
     ])
   },
+  // beforeCreate(){},
   created(){
+    // envからUsers一覧を取得
+    if (!this.currentShowUsers) {
+      console.log('Users initialize start...');
+      this.users = this.$_createdUsersData();
+    }
     // 初回ロード時にinit実行。次回ロード時はstateから再描画するが、
     // lastUpdateと現在の日付が違えば更新を走らせる。
     if (this.date !== this.currentLastUpdate) {
@@ -140,15 +143,12 @@ export default {
       // 新しく値を取得しに行く
       const results = await this.fetchValueToFirestore(keys);
 
-      // 多重データ書き込み防止のため一旦Usersを初期化する
-      this.initUsersData();
       // resultsを元にユーザーデータを更新する
       this.updateUsersPersonality(results, keys);
       // ユーザーデータを元にグラフの描画を設定する
       this.updateChartJS(keys);
 
       this.waiting = false;
-      this.showMaru = true;
     },
     async fetchValueToFirestore(keys){
       const targets = [];
@@ -175,26 +175,33 @@ export default {
     },
     updateUsersPersonality(results, keys){
       const len = keys.length;
+      results.shift();
+      results.reverse();
 
-      for (let i=this.showWeek; i > 0; i--) {
-        const item = results[i];
-        for (let j=0; j < len; j++) {
-          this.users[keys[j]].date.push(moment(item[keys[j]].date).format('M/D'));
-          this.users[keys[j]].weight.push(item[keys[j]].weight);
-          this.users[keys[j]].fat.push(item[keys[j]].fat);
+      for (let i=0; i < len; i++) {
+        const name = keys[i];
+        const userTemp = { date: [], weight: [], fat: [] };
+
+        for (let j=(this.showWeek-1); j >= 0; j--) {
+          const day = results[j];
+          userTemp.date[j] = moment(day[name].date).format('M/D');
+          userTemp.weight[j] = day[name].weight;
+          userTemp.fat[j] = day[name].fat;
         }
+        this.users[name] = userTemp;
       }
+
       // weight, fatに未入力項目があれば前後の値で補完する
       for (let i=0; i < len; i++) {
         this.users[keys[i]].weight = this.adjustIfValueIs(this.users[keys[i]].weight);
         this.users[keys[i]].fat = this.adjustIfValueIs(this.users[keys[i]].fat);
       }
 
-      this.usersData({
-        yoshida: this.users.yoshida,
-        hirata: this.users.hirata,
-        maruyama: this.users.maruyama,
-      });
+      const temp = {};
+      for (let i=0; i < len; i++) {
+        Object.assign(temp, { [keys[i]]: this.users[keys[i]] });
+      }
+      this.usersData(temp);
     },
     updateChartJS(keys){
       // toggleがActiveなユーザのチャートを表示する
@@ -213,13 +220,6 @@ export default {
       this.chartData.fat.labels = this.users[active[0]].date;
       this.chartData.fat.datasets[0].data = this.users[active[0]].fat;
       this.toggle(active[0]);
-    },
-    initUsersData(){
-      this.users = {
-        yoshida: { date: [], weight: [], fat: [] },
-        maruyama: { date: [], weight: [], fat: [] },
-        hirata: { date: [], weight: [], fat: [] },
-      };
     },
     adjustIfValueIs(data){
       // 空の配列が含まれていなければ処理中断
@@ -268,13 +268,10 @@ export default {
       });
     },
     nameConvert(user){
-      let name = user;
-      switch (name) {
-        case 'yoshida': name = '吉田'; break;
-        case 'hirata': name = '平田'; break;
-        case 'maruyama': name = '丸山'; break;
-        default: break;
-      }
+      const name = typeof env.USERS[user] === 'string'
+      ? env.USERS[user]
+      : user;
+
       return name;
     },
   },
