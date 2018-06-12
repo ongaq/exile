@@ -1,12 +1,15 @@
 <template>
   <div class="idx">
-    <router-link to="form" tag="button" class="button is-link">form</router-link>
-    <br><br>
-    <button id="submit" @click="init" v-show="!waiting" class="button is-info">直近2週間のデータを再描画</button>
-    <br><br>
+    <div class="idx__block">
+      <router-link to="form" tag="button" class="button is-link">form</router-link>
+    </div>
+    <div class="idx__block">
+      <button id="submit" @click="init" v-if="!waiting" class="button is-info">直近2週間のデータを再描画</button>
+    </div>
+    <delete-settings class="idx__block" @init="init" :state="isState" :wait="waiting"></delete-settings>
 
     <pulse-loader v-if="waiting"></pulse-loader>
-    <section class="fatPeople" v-show="currentShowUsers && !waiting">
+    <section class="fatPeople" v-if="currentShowUsers && !waiting">
       <nav class="tabs is-boxed is-centered">
         <ul>
           <li v-for="(array, name) in currentUsersData" :key="name"
@@ -22,26 +25,22 @@
           </li>
         </ul>
       </nav>
-      <line-chart :height="200" :chartData="currentChartData.weight" v-show="currentChartData.weight"></line-chart>
-      <line-chart :height="200" :chartData="currentChartData.fat" v-show="currentChartData.fat"></line-chart>
+      <line-chart :height="200" :chartData="currentChartData.weight" v-if="currentChartData.weight"></line-chart>
+      <line-chart :height="200" :chartData="currentChartData.fat" v-if="currentChartData.fat"></line-chart>
     </section>
-
-    <br><br><br>
-    <!-- <img src="/static/matsuri.png" width="100%" alt="">
-    <img src="/static/matsuri2.png" width="100%" alt=""> -->
-
-    <!-- <modal v-if="showMaru">
-  		<div slot="body">
-        <img src="/static/maru.png" width="100%" alt="">
-      </div>
-      <div slot="footer" class="modal-migiue-button">
-        <button @click="showMaru = false">✖︎</button>
-      </div>
-  	</modal> -->
 
     <modal v-if="showError" @close="showError = false">
   		<h3 slot="header">一部のデータの取得が出来ませんでした。</h3>
   	</modal>
+    <!-- <modal v-if="isState.confirm">
+  		<h3 slot="header">設定を削除しますか？</h3>
+      <p slot="body">表示がおかしい、エラーが出ているなどの場合有効です。</p>
+      <button slot="footer" class="modal-default-button button is-small is-info" @click="isState.confirm = false">NO</button>
+      <button slot="footer" class="modal-default-button button is-small is-warning" @click="removeState">YES</button>
+  	</modal>
+    <modal v-if="isState.remove" @close="isState.remove = false">
+  		<h3 slot="header">設定を削除しました。</h3>
+  	</modal> -->
   </div>
 </template>
 
@@ -51,6 +50,7 @@ import * as moment from 'moment';
 import { mapGetters, mapActions } from 'vuex';
 import mixin from '@/mixin';
 import modal from '@/components/modal';
+import DeleteSettings from '@/components/DeleteSettings';
 import LineChart from '@/components/LineChart';
 
 const PulseLoader = require('vue-spinner/dist/vue-spinner.min').PulseLoader;
@@ -76,6 +76,12 @@ export default {
     return {
       showModal: false,
       showError: false,
+      isState: {
+        confirm: false,
+        loading: false,
+        remove: false,
+        show: false,
+      },
       waiting: false,
       users: {},
       chartData: {
@@ -103,10 +109,11 @@ export default {
         },
       },
       showWeek: 14,
+      progress: 0,
       date: moment().add(-1, 'days').format('YYYY-MM-DD'),
     };
   },
-  components: { modal, PulseLoader, LineChart },
+  components: { modal, PulseLoader, LineChart, DeleteSettings },
   computed: {
     ...mapGetters([
       'currentShowUsers',
@@ -120,7 +127,6 @@ export default {
   created(){
     // envからUsers一覧を取得
     if (!this.currentShowUsers) {
-      console.log('Users initialize start...');
       this.users = this.$_createdUsersData();
     }
     // 初回ロード時にinit実行。次回ロード時はstateから再描画するが、
@@ -140,6 +146,7 @@ export default {
     async init(){
       this.waiting = true;
       const keys = Object.keys(this.users);
+
       // 新しく値を取得しに行く
       const results = await this.fetchValueToFirestore(keys);
 
@@ -165,7 +172,10 @@ export default {
 
       const results = await Promise.all(targets.map(async (data) => {
         const resultTemp = {};
-        for (let i=0, obj=Object.keys(data); i < obj.length; i++) {
+        const obj = Object.keys(data);
+        const len = obj.length;
+
+        for (let i=0; i < len; i++) {
           resultTemp[obj[i]] = await this.DBProcess(data, obj[i]);
         }
         return resultTemp;
@@ -175,7 +185,9 @@ export default {
     },
     updateUsersPersonality(results, keys){
       const len = keys.length;
-      results.shift();
+      if (typeof results[0] === 'undefined') {
+        results.shift();
+      }
       results.reverse();
 
       for (let i=0; i < len; i++) {
@@ -210,11 +222,16 @@ export default {
       // 一度もtoggleがtrueになってなければusersの0番目を表示する
       if (!active.length) active = keys;
 
-      this.fillData({
-        date: this.users[active[0]].date,
-        weight: this.users[active[0]].weight,
-        fat: this.users[active[0]].fat
-      });
+      try {
+        this.fillData({
+          date: this.users[active[0]].date,
+          weight: this.users[active[0]].weight,
+          fat: this.users[active[0]].fat
+        });
+      } catch (e) {
+        this.showError = true;
+        return;
+      }
       this.chartData.weight.labels = this.users[active[0]].date;
       this.chartData.weight.datasets[0].data = this.users[active[0]].weight;
       this.chartData.fat.labels = this.users[active[0]].date;
@@ -282,5 +299,13 @@ export default {
 <style lang="scss" scoped>
 .idx {
   padding-top: 30px;
+
+  &__block {
+    margin-bottom: 20px;
+  }
+  &__progress {
+    margin: 30px auto;
+    width: 50%;
+  }
 }
 </style>

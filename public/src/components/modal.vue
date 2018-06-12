@@ -36,78 +36,90 @@ export default {
 <style lang="scss">
 $vue-color: #42b983;
 
-.modal-mask {
-  position: fixed;
-  z-index: 9998;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, .5);
-  display: table;
-  transition: opacity .3s ease;
-}
-.modal-wrapper {
-  display: table-cell;
-  vertical-align: middle;
-}
-.modal-container {
-  position: relative;
-  width: 300px;
-  margin: 0px auto;
-  padding: 20px 30px;
-  background-color: #fff;
-  border-radius: 2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
-  transition: all .3s ease;
-  font-family: Helvetica, Arial, sans-serif;
-}
-.modal-header h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  color: $vue-color;
-}
-.modal-body {
-  margin: 0;
-  text-align: left;
-}
-.modal-default-button {
-  float: right;
-}
-.modal-migiue-button {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  display: block;
-  width: 20px;
-  height: 20px;
-  text-align: center;
-  background-color: #333;
-  border-radius: 10px;
-  z-index: 9;
-
-  button {
+.modal {
+  &-mask {
+    position: fixed;
+    z-index: 9998;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .5);
+    display: table;
+    transition: opacity .3s ease;
+  }
+  &-wrapper {
+    display: table-cell;
+    vertical-align: middle;
+  }
+  &-container {
     position: relative;
-    top: -1px;
+    width: 300px;
+    margin: 0px auto;
+    padding: 20px 30px;
+    background-color: #fff;
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
+    transition: all .3s ease;
+    font-family: Helvetica, Arial, sans-serif;
+  }
+  &-header h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: $vue-color;
+  }
+  &-body {
+    margin: 0;
+    text-align: left;
+    font-size: 12px;
+  }
+  &-default-button {
+    float: right;
+  }
+  &-default-button + &-default-button {
+    margin-right: 10px;
+  }
+  &-migiue-button {
+    position: absolute;
+    top: -4px;
+    right: -4px;
     display: block;
-    padding: 0;
     width: 20px;
     height: 20px;
-    color: #fff;
-    font-size: 14px;
-    z-index: 10;
+    text-align: center;
+    background-color: #333;
+    border-radius: 10px;
+    z-index: 9;
+
+    button {
+      position: relative;
+      top: -1px;
+      display: block;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      color: #fff;
+      font-size: 14px;
+      z-index: 10;
+    }
   }
-}
-.modal-enter,
-.modal-leave-active {
-  opacity: 0;
-}
-.modal-enter .modal-container,
-.modal-leave-active .modal-container {
-  -webkit-transform: scale(1.1);
-  transform: scale(1.1);
-}
-.modal-footer {
-  padding-bottom: 20px;
+  &-enter,
+  &-leave-active {
+    opacity: 0;
+  }
+  &-enter &-container,
+  &-leave-active &-container {
+    -webkit-transform: scale(1.1);
+    transform: scale(1.1);
+  }
+  &-footer {
+    margin-top: 10px;
+
+    &:after {
+      display: table;
+      content: "";
+      clear: both;
+    }
+  }
 }
 </style>

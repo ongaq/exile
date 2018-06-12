@@ -7,27 +7,48 @@ Vue.use(Vuex);
 
 const env = require('../../.env');
 
-export default new Vuex.Store({
-  state: {
-    showUsers: false,
-    isActive: {},
-    users: {},
-    chartData: {
-      date: [],
-      weight: [],
-      fat: [],
-    },
-    lastUpdate: null,
-    formInputter: false,
+const initialState = {
+  showUsers: false,
+  isActive: {},
+  users: {},
+  chartData: {
+    date: [],
+    weight: [],
+    fat: [],
   },
+  lastUpdate: null,
+  form: {
+    inputter: Object.keys(env.USERS)[0],
+    weight: {
+      text: 'input',
+      method: {
+        input: false,
+        select: true,
+      },
+    },
+    fat: {
+      text: 'input',
+      method: {
+        input: false,
+        select: true,
+      },
+    },
+  },
+};
+
+export default new Vuex.Store({
+  state: Object.assign({}, initialState),
   mutations: {
     CHANGE_USERS(state, obj){
       if (!Object.keys(state.users).length) {
         state.users = mixin.methods.$_createdUsersData();
+        state.users = obj;
+      } else {
+        state.users = obj;
       }
-      // console.log('obj:', obj);
-      // state.users = Object.assign({}, state.users, obj);
-      state.users = obj;
+
+      if (!Object.keys(state.users).length) return;
+
       state.showUsers = true;
     },
     CHANGE_DATA(state, item){
@@ -43,7 +64,13 @@ export default new Vuex.Store({
       state.lastUpdate = date;
     },
     CHANGE_INPUTTER(state, user){
-      state.formInputter = user;
+      state.form.inputter = user;
+    },
+    CHANGE_INPUT_METHOD(state, method){
+      Object.assign(state.form, method);
+    },
+    CLEAR_STATE(state){
+      Object.assign(state, initialState);
     },
   },
   actions: {
@@ -52,6 +79,8 @@ export default new Vuex.Store({
     toggle: ({ commit }, user) => commit('CHANGE_TOGGLE', user),
     lastUpdate: ({ commit }, date) => commit('CHANGE_LASTUPDATE', date),
     formInputter: ({ commit }, user) => commit('CHANGE_INPUTTER', user),
+    formMethod: ({ commit }, method) => commit('CHANGE_INPUT_METHOD', method),
+    clearState: ({ commit }) => commit('CLEAR_STATE'),
   },
   getters: {
     currentShowUsers: state => state.showUsers,
@@ -82,7 +111,8 @@ export default new Vuex.Store({
     }),
     currentToggle: state => state.isActive,
     currentLastUpdate: state => state.lastUpdate,
-    currentInputter: state => state.formInputter,
+    currentInputter: state => state.form.inputter,
+    currentMethod: state => state.form,
   },
   plugins: [createPersistedState({
     key: env.LOCAL_STORAGE_NAME,
@@ -91,8 +121,8 @@ export default new Vuex.Store({
       'isActive',
       'users',
       'chartData',
-      'formInputter',
-      'lastUpdate'
+      'form',
+      'lastUpdate',
     ],
   })],
 });
